@@ -1,0 +1,101 @@
+all 150
+seed 2009
+set dummy = %if(t<101,0,1.5)
+set(first=2) y = 1 + dummy*(1+.1*y{1}) + 0.5*y{1} + %ran(1)
+gra 1; # y
+@spectrum(nologscale) y
+
+source f:\regrecur.src
+lin y ; # constant y{1}
+
+@regrecursive(cusum,cohist=coeffs,sighist=stddev,sehist=c_sds) resids
+label cusums upper5 lower5 coeffs(1) coeffs(2)
+# 'CUSUMS' 'Upper 5%' 'Lower 5%' 'Intercept' 'AR(1)'
+
+grparm KEYLABELING  22
+
+spg(vfi=3,Header='Figure 4: Estimation of the Threshold Model')
+
+   gra(hea='The Series',noaxis) ; # y
+
+	graph(header='The CUSUM TEST',patterns,key=below,nokbo) 3
+   # cusums; # upper5  ; # lower5
+
+	@spectrum(nologscale,hea='The Estimated Spectrum of the Series') y
+
+spg(done)
+
+
+set dummy = %if(y1{1}<0,0,1)
+set(first=1) y1 = dummy*.4*y1{1} + 0.5*y1{1} + %ran(1)
+gra 1; # y1
+@spectrum(nologscale) y1
+
+
+lin y1 ; # constant y1{1}
+
+@regrecursive(cusum,cohist=coeffs,sighist=stddev,sehist=c_sds) resids
+label cusums upper5 lower5 coeffs(1) coeffs(2)
+# 'CUSUMS' 'Upper 5%' 'Lower 5%' 'Intercept' 'AR(1)'
+
+grparm KEYLABELING  22
+
+spg(vfi=3,Header='Figure 5: Estimation of the Threshold Model')
+
+   gra(hea='The Series',noaxis) ; # y1
+
+	graph(header='The CUSUM TEST',patterns,key=below,nokbo) 3
+   # cusums; # upper5  ; # lower5
+
+	@spectrum(nologscale,hea='The Estimated Spectrum of the Series') y1
+
+spg(done)
+
+
+****************************************************
+set dummy = %if(y1{1}<2,0,1)
+set(first=2) y = 1 + dummy*(1+.1*y{1}) + 0.5*y{1} + %ran(1)
+gra 1; # y
+@spectrum y
+
+set(first =0) y1 = 1.0*y1{1} + %ran(1)
+gra 1; # y1
+@spectrum y1
+
+set(first=0) y2 = 0.3*y2{1} + %ran(1)
+gra 1; # y2
+@spectrum y2
+
+set(first=0) y3 = y3{1} + %ran(1)
+dif y3 / dy
+gra 1; # dy
+@spectrum(nologscale) dy
+
+set(first=0) y4 = -0.8*y4{1} + %ran(1)
+gra 1; # y4
+@spectrum(nologscale) y4
+
+
+grparm KEYLABELING  22
+
+spg(vfi=5,Header='Figure 3: Using the Estimated Spectrum')
+
+	@spectrum(nologscale,hea='Panel 1: Series with a Break') y
+	@spectrum(nologscale,hea='Panel 2: Series with a Unit Root') y1
+	@spectrum(nologscale,hea='Panel 3: Stationary Series') y2
+	@spectrum(nologscale,hea='Panel 4: Random Walk') dy
+	@spectrum(nologscale,hea='Panel 5: Series with a Negative Coefficient') y4
+
+spg(done)
+
+
+
+
+
+
+
+
+
+
+
+

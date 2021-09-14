@@ -1,0 +1,85 @@
+cal 1970 1 4
+all 2011:1
+open data C:\Users\jones381\Desktop\Fourier_Paper\largeEuropeanGDP.xls
+data(org=obs,format=xls)
+tab
+
+
+com start = 1970:1 , end = 2011:1
+com lags = 1
+set time = t
+sta(print) time
+dec vector[series] sine(10) dsine(10)
+dec vector[series] cosine(10) dcosine(10)
+
+dec vector[integer] reglist
+
+*sta(noprint) italy
+do k = 1,10
+	set sine(k)   = sin(2.*%pi*k*t/%nobs)  ; dif sine(k) / dsine(k)
+	set cosine(k) = cos(2.*%pi*k*t/%nobs)  ; dif cosine(k) / dcosine(k)
+end do k
+
+report(action=define,hlabel=||'Numerator','Denominator','F-value','Tau','DF Test','Freq','rho','rho_df','Lags'||)
+dofor i = 2 3 4 5 6
+ report(row=new,atcol=1) %LABEL([series]i) ;report(row=current,atcol=2) %LABEL(italy)
+   set y / = log([series]i/italy)
+   dif y / dy
+   com lags = 5, hit = 0
+   until hit.eq.1 {
+	  com lags = lags-1
+       if lags == 0; com lags = 1, hit = 1
+	  lin(noprint) dy start end;  # y{1} dy{1 to lags}  constant
+	  if abs(%tstats(1+lags)).ge.(1.95) ; com hit = 1
+	  }
+
+
+   com tau_df = %tstats(1) , rho_df = %beta(1) , lags2 = lags
+
+    compute reglist = || constant | time||
+    com sbc_min = 10000000.
+    do k = 1,5
+       enter(varying) reglist ; # reglist sine(k) cosine(k)
+       linreg(robust,noprint) dy
+       # y{1} dy{1 to lags}  reglist
+ 	  compute sbc = %nobs*log(%rss) + (%nreg)*log(%nobs)
+
+       if (sbc < sbc_min); com sbc_min = sbc , kstar = k
+     end do k
+     compute reglist = || constant | time ||
+     do k = 1,kstar
+       enter(varying) reglist ; # reglist sine(k) cosine(k)
+    end do k
+    linreg(robust) dy
+    # y{1} dy{1 to lags}  reglist
+    exc ; # sine(k) cosine(k)
+
+ 	report(atcol=3,row=current) %cdstat %tstats(1) tau_df kstar %beta(1) rho_df lags
+
+    prj yf
+
+    set yhat = y
+    do j = 1971:2,2011:1 ; com yhat(j) = yhat(j-1) + yf(j)  ; end do j
+    com hea$ = %label([series]i)
+
+    gra(hea=hea$) 2 ; # y ; # yhat
+
+	compute aic1 = %nobs*log(%rss) + 2*(%nreg)
+	compute sbc1 = %nobs*log(%rss) + (%nreg)*log(%nobs)
+
+    dis 'aic1 =' aic1 'sbc1 =' sbc1
+
+end dofor i
+com start$ = %DATELABEL(start)
+report(action=show,window='Start Date ='+start$)
+
+
+
+
+
+
+
+
+
+
+
