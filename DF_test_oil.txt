@@ -1,0 +1,136 @@
+CALENDAR(M) 1960:1
+all 2010:12
+open data c:\work\holt\COMMOD_PRIM_WB_11.xls
+data(org=obs,format=xls)
+tab
+
+
+com start = 1960:2 , end = 2010:12
+com lags = 1
+set time = t
+sta(print) time
+dec vector[series] sine(10) dsine(10)
+dec vector[series] cosine(10) dcosine(10)
+
+dec vector[integer] reglist
+
+*sta(noprint) italy
+do k = 1,10
+	set sine(k)   = sin(2.*%pi*k*t/%nobs)  ; dif sine(k) / dsine(k)
+	set cosine(k) = cos(2.*%pi*k*t/%nobs)  ; dif cosine(k) / dcosine(k)
+end do k
+
+report(action=define,hlabel=||'Commodity','F-value','Tau','DF Test','Freq','rho','rho_df','Lags'||)
+com i = 23
+
+
+ report(row=new,atcol=1) %LABEL([series]i)
+  set price = [series]i
+     set y = log(100*(price/price(1996:1))/(ppi/ppi(1996:1)))
+	dif y start * dy
+
+   com lags = 12, hit = 0
+   until hit.eq.1 {
+	  com lags = lags-1
+       if lags == 0; com lags = 1, hit = 1
+	  lin(noprint) dy start end;  # y{1} dy{1 to lags}  constant time
+	  if abs(%tstats(1+lags)).ge.(1.95) ; com hit = 1
+	  }
+
+
+   com tau_df = %tstats(1) , rho_df = %beta(1) , lags2 = lags
+
+    compute reglist = || constant | time||
+    com sbc_min = 10000000.
+    do k = 1,5
+       enter(varying) reglist ; # reglist sine(k) cosine(k)
+       linreg(robust,noprint) dy
+       # y{1} dy{1 to lags}  reglist
+ 	  compute sbc = %nobs*log(%rss) + (%nreg)*log(%nobs)
+
+       if (sbc < sbc_min); com sbc_min = sbc , kstar = k
+     end do k
+     compute reglist = || constant |time||
+     do k = 1,kstar
+       enter(varying) reglist ; # reglist sine(k) cosine(k)
+    end do k
+    linreg dy
+    # y{1} dy{1 to lags}  reglist
+    exc ; # sine(1) cosine(1) sine(2) cosine(2) sine(3) cosine(3)
+
+ 	report(atcol=2,row=current) %cdstat %tstats(1) tau_df kstar %beta(1) rho_df lags
+
+
+
+end
+
+com start$ = %DATELABEL(start)
+report(action=show,window='Start Date ='+start$)
+
+
+lin dy; #y{1} dy{1 to lags} constant time
+
+
+ linreg dy
+    # y{1} dy{1 to lags}  reglist
+    exc ; # sine(1) cosine(1) sine(2) cosine(2) sine(3) cosine(3)
+
+***********Bai-Perron*******************
+
+set Series = y
+@baiperron(maxbreaks = 9) Series 1961:02 * resids2; # constant
+prj Bai_Perron
+
+gra(hea=  'Figure 2: Modeling Crude Oil Prices with Bai Perron ' ,patterns,key=below) 2; # Series 1961:02 *; # Bai_Perron 1961:02 *
+
+***************Linear Model***************
+@lagselect dy 1961:02 *
+
+lin dy 1961:02 * resids; # constant y{1} dy{1 to 6}
+prj linear
+compute ic = %nobs*log(%rss) + 2*(%nreg)
+compute sbc = %nobs*log(%rss) + (%nreg)*log(%nobs)
+display 'aic = ' ic 'bic = ' sbc
+gra 1; # resids
+cor(qstats,span=4,number=16,dfc=%narma) resids
+
+
+prj fitted
+set f2 = fitted**2; set f3 = fitted**3 ;set f4 = fitted**4
+lin resids ; # constant y{1} dy{1 to 6}  f2 f3 f4
+exc ; # f2 f3 f4
+@reset(h=4) dy
+# constant constant y{1} dy{1 to 6}
+@reset(h=3,test=lmtest) dy
+# constant y{1} dy{1 to 6}
+
+@startest(p=6) dy
+
+
+
+****************Flexible Fourier Form***************
+compute reglist = || constant | time||
+    com sbc_min = 10000000.
+    do k = 1,10
+       enter(varying) reglist ; # reglist sine(k) cosine(k)
+       lin dy 1961:02 * resids3
+       # y{1} dy{1 to 6}  reglist
+ 	  compute sbc = %nobs*log(%rss) + (%nreg)*log(%nobs)
+
+       if (sbc < sbc_min); com sbc_min = sbc , kstar = k
+     end do k
+dis k
+
+compute ic = %nobs*log(%rss) + 2*(%nreg)
+compute sbc = %nobs*log(%rss) + (%nreg)*log(%nobs)
+display 'aic = ' ic 'bic = ' sbc
+
+
+lin dy 1961:02 * resids3
+# y{1} dy{1 to 6}  constant time sine(1) cosine(1) sine(2) cosine(2) sine(3) cosine(3) sine(4) cosine(4) sine(5) cosine(5) sine(6) cosine(6) sine(7) cosine(7) sine(8) cosine(8) sine(9) cosine(9) sine(10) cosine(10)
+compute ic = %nobs*log(%rss) + 2*(%nreg)
+compute sbc = %nobs*log(%rss) + (%nreg)*log(%nobs)
+display 'aic = ' ic 'bic = ' sbc
+
+
+

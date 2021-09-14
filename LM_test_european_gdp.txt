@@ -1,0 +1,104 @@
+cal 1970 1 4
+all 2011:1
+open data C:\Users\jones381\Desktop\Fourier_Paper\largeEuropeanGDP.xls
+data(org=obs,format=xls)
+tab
+
+
+com start = 1970:1 , end = 2011:1
+com lags = 1
+set time = t
+sta(print) time
+dec vector[series] sine(10) dsine(10)
+dec vector[series] cosine(10) dcosine(10)
+
+dec vector[integer] reglist
+
+*sta(noprint) italy
+do k = 1,10
+	set sine(k)   = sin(2.*%pi*k*t/%nobs)  ; dif sine(k) / dsine(k)
+	set cosine(k) = cos(2.*%pi*k*t/%nobs)  ; dif cosine(k) / dcosine(k)
+end do k
+
+
+report(action=define,hlabel=||'Numerator','Denominator','k','Tau LM','DF Test','Lags','T'||)
+do i1 = 1,5
+do i2 = i1+1,6
+
+
+   set y / = log([series]i1/[series]i2)
+   dif y / dy
+   com lags = 5, hit = 0
+   until hit.eq.1 {
+	  com lags = lags-1
+       if lags == 0; com lags = 1, hit = 1
+	  lin(noprint) dy start end;  # y{1} dy{1 to lags}  constant
+	  if abs(%tstats(1+lags)).ge.(1.95) ; com hit = 1
+	  }
+
+
+
+     compute reglist = || constant | time||
+    com sbc_min = 10000000.
+    do k = 1,5
+       enter(varying) reglist ; # reglist sine(k) cosine(k)
+       linreg(robust,noprint) dy
+       # y{1} dy{1 to lags}  reglist
+ 	  compute sbc = %nobs*log(%rss) + (%nreg)*log(%nobs)
+
+       if (sbc < sbc_min); com sbc_min = sbc , kstar = k
+     end do k
+     compute reglist = || constant | time ||
+     do k = 1,kstar
+       enter(varying) reglist ; # reglist sine(k) cosine(k)
+    end do k
+
+
+
+     compute reglist = || constant ||
+     do k = 1,kstar
+         enter(varying) reglist ; # reglist dsine(k) dcosine(k)
+     end do k
+     lin(noprint) dy start * resids ; # reglist
+     set s_tilde = y - %beta(1)*t
+     do k = 1,kstar
+              set s_tilde = s_tilde - %beta(2*k)*sine(k) - %beta(2*k+1)*cosine(k)
+     end do k
+     dif s_tilde / ds_tilde
+
+
+	com lags = 12, hit = 0
+		until hit.eq.1 {
+			com lags = lags-1
+			lin(noprint) dy start *;  # ds_tilde{1 to lags} reglist s_tilde{1}
+			if lags==1.or.(abs(%tstats(lags)).ge.(1.95)) ; com hit = 1
+			}
+*         end until
+
+
+      lin(noprint) dy start * ; # s_tilde{1} reglist ds_tilde{1 to lags}
+
+
+      com  tau_lm = %tstats(1) , nobs = %nobs
+      lin(noprint) dy start * ; # y{1}  constant dy{1 to lags}
+
+
+  report(atcol=1) %LABEL([series]i1) ; report(atcol=2) %LABEL([series]i2) kstar  tau_lm %tstats(1)  lags  nobs
+
+
+end do i2
+end do i1
+
+
+
+report(action=show,window='Start Date')
+
+
+
+
+
+
+
+
+
+

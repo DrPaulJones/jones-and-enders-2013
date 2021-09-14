@@ -1,0 +1,107 @@
+cal 1970 1 4
+all 2011:1
+open data C:\Users\jones381\Desktop\Fourier_Paper\largeEuropeanGDP.xls
+data(org=obs,format=xls)
+tab
+
+
+com start = 1970:1 , end = 2011:1
+com lags = 1
+com lmax = 36
+set trend = t
+set tau 1 5 = 0
+sta(print) trend
+dec vector[series] sine(10) dsine(10)
+dec vector[series] cosine(10) dcosine(10)
+
+dec vector[integer] reglist
+
+*sta(noprint) italy
+do k = 1,10
+	set sine(k)   = sin(2.*%pi*k*t/%nobs)  ; dif sine(k) / dsine(k)
+	set cosine(k) = cos(2.*%pi*k*t/%nobs)  ; dif cosine(k) / dcosine(k)
+end do k
+
+
+report(action=define,hlabel=||'Numerator','Denominator','Lags','k','Tau','t stat','T'||)
+do i1 = 1,7
+do i2 = i1+1,8
+
+
+   set y / = log([series]i1/[series]i2)
+   dif y / dy
+   com lags = 5, hit = 0
+   until hit.eq.1 {
+	  com lags = lags-1
+       if lags == 0; com lags = 1, hit = 1
+	  lin(noprint) dy start end;  # y{1} dy{1 to lags}  constant
+	  if abs(%tstats(1+lags)).ge.(1.95) ; com hit = 1
+	  }
+
+
+
+     compute reglist = || constant | trend||
+    com sbc_min = 10000000.
+    do k = 1,5
+       enter(varying) reglist ; # reglist sine(k) cosine(k)
+       linreg(robust,noprint) dy
+       # y{1} dy{1 to lags}  reglist
+ 	  compute sbc = %nobs*log(%rss) + (%nreg)*log(%nobs)
+
+       if (sbc < sbc_min); com sbc_min = sbc , kstar = k
+     end do k
+
+
+      do k = 1,kstar
+         if k == 1 ; compute reglist = || dsine(1) | dcosine(1) ||
+         if k > 1  ; enter(varying) reglist ; # reglist dsine(k) dcosine(k)
+    end do k
+    box(constant,ar=lags,ma=1,regressors,print) dy /  resids
+     # reglist
+     if %converged <> 1  {
+         do k = 1,kstar
+             if k == 1 ; compute reglist = ||trend| sine(1) | cosine(1) ||
+             if k > 1  ; enter(varying) reglist ; # reglist sine(k) cosine(k)
+        end do k
+        box(constant,ar=lags,regressors,noprint) y /  resids
+         # reglist
+      }
+
+     set y_star = y
+     do p = 1,lags
+         set y_f start * = %beta(p+1)*y{p}
+          set y_star start * = y_star - y_f
+     end do p
+     do k = 1,kstar
+         if k == 1 ; compute reglist = || sine(1) | cosine(1) ||
+         if k > 1  ; enter(varying) reglist ; # reglist sine(k) cosine(k)
+    end do k
+
+     lin(print) y_star start * resids ; # constant trend reglist
+     com tstat = %tstats(2)
+     if abs(tstat) < 1.96  ; lin(noprint) y_star start * resids ; # constant reglist
+     com t$ = 'Yes'
+     if abs(tstat) < 1.96 ; com t$ = 'No'
+     set sums = 0.
+     acc resids / sums
+
+    compute sum2 = 0.0
+    do t = start,2011:1
+           compute sum2 = sum2 + sums(t)*sums(t)
+    end do t
+
+    mcov(lwindow=quadratic,lags=lmax) start * resids
+*    mcov(damp=1.,lags=0) start * resids
+    # constant
+    compute tau(1) = (sum2/%nobs**2)/(%cmom(1,1)/%ndf)
+*     dis %LABEL([series]i) tau(1)
+    report(atcol=1) %LABEL([series]i1) ; report(atcol=2) %LABEL([series]i2) lags kstar tau(1) tstat  %nobs
+end do i2
+end do i1
+
+     report(window="Output",action=show)
+
+
+
+
+

@@ -1,0 +1,163 @@
+all 500
+set time = t
+com kstar = 3
+sou C:\Users\jones381\Desktop\Fourier_Paper/baiperron2.SRC
+
+
+grparm hlabel 15  axislabeling 25  hea 30  sub 25
+com h$ = 'Series: ____    1-Frequency: _ _ _      2-Frequencies: __ __'
+com xlabel$ = || 'Sharp Breaks', 'One Break' ,  'Two Breaks'||
+spg(subhea='Figure 1: Sharp, ESTAR and LSTAR Breaks',hfi=3,vfi=3,xlab=xlabel$,hlab = h$)
+
+
+
+tab
+
+com length = 500
+com k = 1
+set sin1 = sin(2*%pi*k*t/length)
+set cos1 = cos(2*%pi*k*t/length)
+compute reglist = || constant, time, sin1, cos1||
+com k = 2
+set sin2 = sin(2*%pi*k*t/length)
+set cos2 = cos(2*%pi*k*t/length)
+compute reglist2 = || constant, time, sin1, cos1, sin2, cos2||
+compute reglist3 = || constant ||
+
+do type = 1,9
+  if type == 1 { ; set break = %if(t.le.0.45*length.or.t>.75*length,kstar,0)
+ 		com hea$ = 'Panel ' + type + ': Temporary Break' ; }
+   if type == 2 { ; set break = %if(t.ge.length/2.,2.28+.0025*t,-.8+.015*t)
+ 		com hea$ = 'Panel ' + type + ': Change in Slope'; }
+  if type == 3 {
+ 	com dslope = 3.
+ 	set break1 = %if(t.ge.length/2.,0,.5*kstar)
+ 	set break = break1 + %if(t.ge.length/2.,.2+1.2*t/length,(1.+dslope)*t/length)
+ 		com hea$ = 'Panel ' + type + ': Change in Level and Slope'; }
+
+
+  if type == 4 {
+    com gamma = 0.05
+    set break = 0 + kstar/(1 + exp(gamma*(t-length/2.)))
+    com hea$ = 'Panel ' + type + ': LSTAR Break at T/2 ' ; }
+ if type == 5 {
+    set break = 0 + kstar/(1 + exp(gamma*(t-0.75*length)))
+    com hea$ = 'Panel ' + Type  + ': LSTAR Break at 3T/4'  ; }
+
+
+ if type == 6 {
+     com gamma = 0.0002
+     set break = 0 + kstar*(1-exp(-gamma*(t-3*length/4.)**2))
+     com hea$ = 'Panel ' + type +  ': ESTAR Break at 3T/4' ; }
+if type == 7 {
+    com gamma = 0.05
+    set break = 2 + kstar/(1+exp(gamma*(t-0.2*length))) - .5*kstar/(1+exp(gamma*(t-.75*length)))
+    com hea$ = 'Panel ' + type  + ': Offsetting LSTAR Breaks at T/5 and 3T/4' ; }
+if type == 8 {
+    com gamma = 0.05
+    set break = .5*kstar/(1+exp(gamma*(t-0.2*length))) + .5*kstar/(1+exp(gamma*(t-.75*length)))
+    com hea$ = 'Panel ' + type  + ': Reinforcing LSTAR Breaks at T/5 and 3T/4' ; }
+if type == 9 {
+    com gamma = 0.0003
+    set break = 2 + .6*kstar*(1-exp(-gamma*(t-length/5.)**2)) - .5*kstar*(1-exp(-gamma*(t-3*length/4.)**2))
+    com hea$ = 'Panel ' + type  + ': ESTAR Breaks at T/5 and 3T/4' ; }
+
+
+   set deter = break ; set y = break
+
+
+
+lin(noprint) break ; # reglist
+prj fitted
+lin(noprint) break ; # reglist2
+prj fitted2
+com h$ = 'Panel ' + type
+gra(noaxis,hea=hea$,patterns,min=-1,max=4) 3 ; #  break ; # fitted / 2; # fitted2 / 6
+
+
+
+
+end do type
+
+
+
+spg(done)
+
+ com gamma = 0.05
+    set break1 = 0 + kstar/(1 + exp(gamma*(t-length/2.)))
+
+lin(noprint) break1 ; # reglist2
+prj fitted21
+
+@baiperron(maxbreaks = 2) break1 ; # reglist3
+prj fitted31
+gra(patterns) 3; #break1; # fitted31; # fitted21 / 6
+
+set break2 = 0 + kstar/(1 + exp(gamma*(t-0.75*length)))
+
+lin(noprint) break2 ; # reglist2
+prj fitted22
+
+@baiperron(maxbreaks = 2) break2 ; # reglist3
+prj fitted32
+gra(patterns) 3; #break2; # fitted32; # fitted22 / 6
+
+com gamma = 0.0002
+     set break3 = 0 + kstar*(1-exp(-gamma*(t-3*length/4.)**2))
+
+lin(noprint) break3 ; # reglist2
+prj fitted23
+
+@baiperron(maxbreaks = 2) break3 ; # reglist3
+prj fitted33
+gra(patterns) 3; #break3; # fitted33; # fitted23 / 6
+
+com gamma = 0.05
+    set break4 = 2 + kstar/(1+exp(gamma*(t-0.2*length))) - .5*kstar/(1+exp(gamma*(t-.75*length)))
+
+lin(noprint) break4 ; # reglist2
+prj fitted24
+
+@baiperron(maxbreaks = 2) break4 ; # reglist3
+prj fitted34
+gra(patterns) 3; #break4; # fitted34; # fitted24 / 6
+
+com gamma = 0.05
+    set break5 = .5*kstar/(1+exp(gamma*(t-0.2*length))) + .5*kstar/(1+exp(gamma*(t-.75*length)))
+
+lin(noprint) break5 ; # reglist2
+prj fitted25
+
+@baiperron(maxbreaks = 2) break5 ; # reglist3
+prj fitted35
+gra(patterns) 3; #break5; # fitted35; # fitted25 / 6
+
+ com gamma = 0.0003
+    set break6 = 2 + .6*kstar*(1-exp(-gamma*(t-length/5.)**2)) - .5*kstar*(1-exp(-gamma*(t-3*length/4.)**2))
+
+lin(noprint) break6 ; # reglist2
+prj fitted26
+
+@baiperron(maxbreaks = 2) break6 ; # reglist3
+prj fitted36
+gra(patterns) 3; #break6; # fitted36; # fitted26 / 6
+
+grparm hlabel 15  axislabeling 25  hea 30  sub 25
+com h$ = 'Series: ____    Bai Perron: _ _ _      2-Frequencies: __ __'
+com xlabel$ = || 'One Break' ,  'Two Breaks'||
+spg(subhea='Figure 1: ESTAR and LSTAR Breaks',hfi=2,vfi=3,xlab=xlabel$,hlab = h$)
+gra(noaxis,hea=  'Panel 1: LSTAR Break at T/2 ' ,patterns,min=-1,max=4) 3; #break1; # fitted31; # fitted21 / 6
+gra(noaxis,hea=  'Panel 2: LSTAR Break at 3T/4' ,patterns,min=-1,max=4) 3; #break2; # fitted32; # fitted22 / 6
+gra(noaxis,hea=  'Panel 3: ESTAR Break at 3T/4' ,patterns,min=-1,max=4) 3; #break3; # fitted33; # fitted23 / 6
+gra(noaxis,hea=  'Panel 4: Offsetting LSTAR Breaks at T/5 and 3T/4',patterns,min=-1,max=4) 3; #break4; # fitted34; # fitted24 / 6
+gra(noaxis,hea=  'Panel 5: Reinforcing LSTAR Breaks at T/5 and 3T/4',patterns,min=-1,max=4) 3; #break5; # fitted35; # fitted25 / 6
+gra(noaxis,hea=  'Panel 6: ESTAR Breaks at T/5 and 3T/4',patterns,min=-1,max=4) 3; #break6; # fitted36; # fitted26 / 6
+
+spg(done)
+
+
+
+
+
+
+

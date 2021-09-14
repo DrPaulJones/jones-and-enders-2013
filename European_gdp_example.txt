@@ -1,0 +1,157 @@
+cal 1970 1 4
+all 2011:1
+open data C:\Users\jones381\Desktop\Fourier_Paper\largeEuropeanGDP.xls
+data(org=obs,format=xls)
+tab
+
+
+com start = 1970:1 , end = 2011:1
+com lags = 1
+set time = t
+*sta(print) time
+set sin1 start end = sin((2*%pi/%nobs)*t)   ; dif sin1 / dsin1
+set cos1 start end = cos((2*%pi/%nobs)*t)   ; dif cos1 / dcos1
+set sin2 start end = sin((2*%pi*2/%nobs)*t) ; dif sin2 / dsin2
+set cos2 start end = cos((2*%pi*2/%nobs)*t) ; dif cos2 / dcos2
+set sin3 start end = sin((2*%pi*3/%nobs)*t) ; dif sin3 / dsin3
+set cos3 start end = cos((2*%pi*3/%nobs)*t) ; dif cos3 / dcos3
+set sin4 start end = sin((2*%pi*4/%nobs)*t) ; dif sin4 / dsin4
+set cos4 start end = cos((2*%pi*4/%nobs)*t) ; dif cos4 / dcos4
+set sin5 start end = sin((2*%pi*5/%nobs)*t) ; dif sin5 / dsin5
+set cos5 start end = cos((2*%pi*5/%nobs)*t) ; dif cos5 / dcos5
+tab
+
+
+report(action=define,hlabel=||'Numerator','Denominator','Tau','DF Test','rho','rho_df','Lags'||)
+do i2 = 3,6
+do i1 = i2-2,6
+
+
+
+
+   report(row=new,atcol=1) %LABEL([series]i2) ;report(row=current,atcol=2) %LABEL([series]i1)
+   set y start end = log([series]i2 / [series]i1)
+   dif y / dy
+   com lags = 13, hit = 0
+   until hit.eq.1 {
+	  com lags = lags-1
+      if lags == 0; com lags = 1, hit = 1
+		lin(noprint) dy start end;  # y{1} dy{1 to lags}  constant
+	  if abs(%tstats(1+lags)).ge.(1.95) ; com hit = 1
+	  }
+   com tau_df = %tstats(1) , rho_df = %beta(1) , lags2 = lags
+
+   report(atcol=3,row=current) %tstats(1) tau_df %beta(1) rho_df lags
+
+
+end do i2
+end do i1
+com start$ = %DATELABEL(start)
+report(action=show,window='Start Date ='+start$)
+
+
+
+
+* OUR DF TEST
+   set y start end = log(germany / spain)
+   dif y / dy
+
+   set k = 1
+      linreg(print,robust) dy start end
+      # y{1} constant cos1 sin1  dy{1 to 4}
+      exc(print) ; # cos1 sin1
+		compute aic1 = %nobs*log(%rss) + 2*(%nreg)
+		compute sbc1 = %nobs*log(%rss) + (%nreg)*log(%nobs)
+
+		dis 'aic1 =' aic1
+		dis 'sbc1 =' sbc1
+
+
+		linreg(print,robust) dy start end
+      # y{1} constant cos1 sin1 cos2 sin2 dy{1 to 4}
+      exc(print) ; # cos1 sin1 cos2 sin2
+		compute aic2 = %nobs*log(%rss) + 2*(%nreg)
+		compute sbc2 = %nobs*log(%rss) + (%nreg)*log(%nobs)
+
+		dis 'aic2 =' aic2
+		dis 'sbc2 =' sbc2
+
+
+
+		linreg(print,robust) dy start end
+      # y{1} constant cos1 sin1 cos2 sin2 cos3 sin3 dy{1 to 4}
+      exc(print) ; # cos1 sin1 cos2 sin2 cos3 sin3
+		compute aic3 = %nobs*log(%rss) + 2*(%nreg)
+		compute sbc3 = %nobs*log(%rss) + (%nreg)*log(%nobs)
+
+		dis 'aic3 =' aic3
+		dis 'sbc3 =' sbc3
+
+
+***LOOP
+
+		 set k = 1
+      linreg(print,robust) dy start end
+      # y{1} constant [series](3+4*k) [series](5+4*k)  dy{1 to lags}
+      exc(print) ; # [series](3+4*k) [series](5+4*k)
+		compute aic1 = %nobs*log(%rss) + 2*(%nreg)
+		compute sbc1 = %nobs*log(%rss) + (%nreg)*log(%nobs)
+
+		dis 'aic1 =' aic1
+		dis 'sbc1 =' sbc1
+
+
+
+		linreg(print,robust) dy start end
+      # y{1} constant [series](3+4*k) [series](5+4*k) [series](7+4*k) [series](9+4*k) dy{1 to lags}
+      exc(print) ; # [series](3+4*k) [series](5+4*k) [series](7+4*k) [series](9+4*k)
+		compute aic2 = %nobs*log(%rss) + 2*(%nreg)
+		compute sbc2 = %nobs*log(%rss) + (%nreg)*log(%nobs)
+
+		dis 'aic2 =' aic2
+		dis 'sbc2 =' sbc2
+
+
+
+		linreg(print,robust) dy start end
+      # y{1} constant [series](3+4*k) [series](5+4*k) [series](7+4*k) [series](9+4*k) [series](11+4*k) [series](13+4*k) dy{1 to lags}
+      exc(print) ; # [series](3+4*k) [series](5+4*k) [series](7+4*k) [series](9+4*k) [series](11+4*k) [series](13+4*k)
+		compute aic3 = %nobs*log(%rss) + 2*(%nreg)
+		compute sbc3 = %nobs*log(%rss) + (%nreg)*log(%nobs)
+
+		dis 'aic3 =' aic3
+		dis 'sbc3 =' sbc3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
